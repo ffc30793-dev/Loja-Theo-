@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>THÉO LORENZO MULTIMARCAS TL</title>
+
+    <!-- CSS será colocado aqui depois -->
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <!-- TOPO -->
+    <div class="top-bar">
+        ⚡ Variedades com o melhor preço e qualidade
+    </div>
+
+
+    <!-- CABEÇALHO -->
+    <header>
+
+        <div class="header-container">
+
+            <!-- LOGO / PERFIL -->
+            <a href="#inicio" class="logo-area">
+
+                <img
+                    src="perfil.png"
+                    alt="THÉO LORENZO MULTIMARCAS TL"
+                    class="profile-logo"
+                >
+
+                <div class="store-name">
+                    <h1>
+                        THÉO LORENZO
+                        <span>MULTIMARCAS TL</span>
+                    </h1>
+
+                    <p>
+                        Moda Masculina, Feminina e Muito Mais
+                    </p>
+                </div>
+
+            </a>
+
+
+            <!-- BOTÃO TEMA -->
+            <button
+                id="themeButton"
+                class="theme-button"
+                type="button"
+                aria-label="Alterar tema"
+            >
+                ☀️
+            </button>
+
+        </div>
+
+
+        <!-- MENU -->
+        <nav class="navigation">
+
+            <a href="#inicio">Início</a>
+
+            <a href="#produtos">Produtos</a>
+
+            <a href="#masculino">Masculino</a>
+
+            <a href="#feminino">Feminino</a>
+
+            <a href="#infantil">Infantil</a>
+
+            <a href="#contato">Contato</a>
+
+        </nav>
+
+    </header>
+
+
+
+    <!-- CONTEÚDO PRINCIPAL -->
+    <main id="inicio">
+
+
+        <!-- HERO -->
+        <section class="hero">
+
+            <div class="hero-content">
+
+                <span class="stock-alert">
+                    🔥 LOJA COMEÇANDO AGORA
+                    • POUCAS UNIDADES
+                </span>
+
+
+                <h2>
+                    Seu estilo começa
+                    <strong>aqui.</strong>
+                </h2>
+
+
+                <p>
+                    Moda masculina, feminina, infantil
+                    e muito mais para você e toda sua família.
+                </p>
+
+
+                <a
+                    href="#produtos"
+                    class="main-button"
+                >
+                    Ver produtos 🛍️
+                </a>
+
+            </div>
+
+
+            <!-- LOGO GRANDE -->
+            <div class="hero-logo">
+
+                <img
+                    src="perfil.png"
+                    alt="Logo da loja"
+                >
+
+            </div>
+
+        </section>
+
+
+
+        <!-- AVISO -->
+        <section class="store-notice">
+
+            <div class="notice-box">
+
+                ⚠️
+
+                <strong>
+                    Estoque inicial limitado
+                </strong>
+
+                <span>
+                    Gostou de uma peça?
+                    Clique em comprar e fale diretamente conosco pelo WhatsApp.
+                </span>
+
+            </div>
+
+        </section>
+
+
+
+        <!-- PRODUTOS -->
+        <section
+            class="products-section"
+            id="produtos"
+        >
+
+            <div class="section-title">
+
+                <h2>
+                    Produtos
+                    <span>Disponíveis</span>
+                </h2>
+
+                <div class="title-line"></div>
+
+                <p>
+                    Confira algumas das peças disponíveis.
+                </p>
+
+            </div>
+
+
+
+            <!-- GRID DOS PRODUTOS -->
+            <div class="products-grid">
+
+
+                <!-- PRODUTO 1 -->
+                <article
+                    class="product-card"
+                    id="feminino"
+                >
+
+                    <div class="product-image">
+
+                        <span class="product-badge">
+                            POUCAS UNIDADES
+                        </span>
+
+                        <img
+                            src="foto1.jpg"
+                            alt="Vestido feminino estampado"
+                        >
+
+                    </div>
+
+
+                    <div class="product-info">
+
+                        <h3>
+                            Vestido Feminino Estampado
+                        </h3>
+
+                        <p>
+                            Modelo estampado feminino.
+                        </p>
+
+                        <button
+                            class="buy-button"
+                            onclick="comprar('Vestido Feminino Estampado')"
+                        >
+                            💬 Comprar pelo WhatsApp
+                        </button>
+
+                    </div>
+
+                </article>
+
+
+
+                <!-- PRODUTO 2 -->
+                <article
+                    class="product-card"
+                    id="infantil"
+                >
+
+                    <div class="product-image">
+
+                        <span class="product-badge">
+                            POUCAS UNIDADES
+                        </span>
+
+                        <img
+                            src="foto3.jpg"
+                            alt="Camiseta infantil estampada"
+                        >
+
+                    </div>
+
+
+                    <div class="product-info">
+
+                        <h3>
+                            Camiseta Infantil Estampada
+                        </h3>
+
+                        <p>
+                            Modelo infantil confortável e estiloso.
+                        </p>
+
+                        <button
+                            class="buy-button"
+                            onclick="comprar('Camiseta Infantil Estampada')"
+                        >
+                            💬 Comprar pelo WhatsApp
+                        </button>
+
+                    </div>
+
+                </article>
+
+
+
+                <!-- PRODUTO 3 -->
+                <article class="product-card">
+
+                    <div class="product-image">
+
+                        <span class="product-badge">
+                            POUCAS UNIDADES
+                        </span>
+
+                        <img
+                            src="foto2.jpg"
+                            alt="Camiseta infantil panda"
+                        >
+
+                    </div>
+
+
+                    <div class="product-info">
+
+                        <h3>
+                            Camiseta Infantil Panda
+                        </h3>
+
+                        <p>
+                            Modelo infantil com estampa panda.
+                        </p>
+
+                        <button
+                            class="buy-button"
+                            onclick="comprar('Camiseta Infantil Panda')"
+                        >
+                            💬 Comprar pelo WhatsApp
+                        </button>
+
+                    </div>
+
+                </article>
+
+
+
+                <!-- PRODUTO 4 -->
+                <article
+                    class="product-card"
+                    id="masculino"
+                >
+
+                    <div class="product-image">
+
+                        <span class="product-badge">
+                            POUCAS UNIDADES
+                        </span>
+
+                        <img
+                            src="foto4.jpg"
+                            alt="Camiseta masculina"
+                        >
+
+                    </div>
+
+
+                    <div class="product-info">
+
+                        <h3>
+                            Camiseta Básica
+                        </h3>
+
+                        <p>
+                            Modelo básico masculino.
+                        </p>
+
+                        <button
+                            class="buy-button"
+                            onclick="comprar('Camiseta Básica')"
+                        >
+                            💬 Comprar pelo WhatsApp
+                        </button>
+
+                    </div>
+
+                </article>
+
+
+            </div>
+
+        </section>
+
+
+
+        <!-- SOBRE A LOJA -->
+        <section class="about-section">
+
+            <div class="about-content">
+
+                <div class="about-logo">
+
+                    <img
+                        src="perfil.png"
+                        alt="THÉO LORENZO MULTIMARCAS TL"
+                    >
+
+                </div>
+
+
+                <div>
+
+                    <span class="small-title">
+                        SOBRE A LOJA
+                    </span>
+
+                    <h2>
+                        Qualidade,
+                        <span>variedade</span>
+                        e bom preço.
+                    </h2>
+
+                    <p>
+                        Estamos começando agora e trabalhando
+                        para trazer variedades de roupas e produtos
+                        para toda a família.
+                    </p>
+
+                    <p>
+                        Como nosso estoque inicial é limitado,
+                        algumas peças podem acabar rapidamente.
+                    </p>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+
+    </main>
+
+
+
+    <!-- RODAPÉ -->
+    <footer id="contato">
+
+        <div class="footer-container">
+
+
+            <div class="footer-column">
+
+                <img
+                    src="perfil.png"
+                    alt="Logo"
+                    class="footer-logo"
+                >
+
+                <h3>
+                    THÉO LORENZO
+                    MULTIMARCAS TL
+                </h3>
+
+                <p>
+                    Variedades com preço e qualidade.
+                    Moda masculina, feminina, infantil e muito mais.
+                </p>
+
+            </div>
+
+
+
+            <div class="footer-column">
+
+                <h3>
+                    Categorias
+                </h3>
+
+                <ul>
+
+                    <li>
+                        <a href="#masculino">
+                            Masculino
+                        </a>
+                    </li>
+
+                    <li>
+                        <a href="#feminino">
+                            Feminino
+                        </a>
+                    </li>
+
+                    <li>
+                        <a href="#infantil">
+                            Infantil
+                        </a>
+                    </li>
+
+                    <li>
+                        <a href="#produtos">
+                            Produtos
+                        </a>
+                    </li>
+
+                </ul>
+
+            </div>
+
+
+
+            <div class="footer-column">
+
+                <h3>
+                    Atendimento
+                </h3>
+
+                <p>
+                    💬 WhatsApp
+                </p>
+
+                <p>
+                    (86) 98194-2794
+                </p>
+
+                <p>
+                    📍 SMT CDP JZDP BMTS E ASSCP
+                </p>
+
+            </div>
+
+
+        </div>
+
+
+        <div class="copyright">
+
+            © 2026 THÉO LORENZO MULTIMARCAS TL
+
+        </div>
+
+    </footer>
+
+
+
+    <!-- JavaScript será colocado aqui depois -->
+    <script src="script.js"></script>
+
+</body>
+
+</html>
