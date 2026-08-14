@@ -220,6 +220,24 @@
     color:var(--muted);font-size:12.5px;font-weight:600;margin-top:10px;padding:6px;
   }
 
+  /* formulário de entrega */
+  .checkout-back{
+    background:transparent;border:none;color:var(--red);font-weight:700;
+    font-size:13px;padding:4px 0 14px;
+  }
+  .checkout-title{font-size:16px;margin:0 0 14px;}
+  .ck-label{display:block;font-size:12px;font-weight:700;color:var(--muted);margin:12px 0 5px;}
+  .ck-input{
+    width:100%;box-sizing:border-box;background:var(--bg-panel-2);
+    border:1px solid var(--line);border-radius:10px;color:var(--text);
+    padding:11px 12px;font-size:14.5px;font-family:'Rajdhani',sans-serif;font-weight:600;
+  }
+  select.ck-input{-webkit-appearance:none;appearance:none;}
+  .ck-row{display:flex;gap:10px;}
+  .ck-col{flex:1;}
+  .ck-col-num{flex:0 0 84px;}
+  .ck-error{color:var(--red);font-size:12.5px;font-weight:700;margin:14px 0 0;min-height:14px;}
+
   .product-grid{
     display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));
     gap:14px;margin-top:20px;
@@ -705,6 +723,7 @@
   // ===== carrinho de compras =====
   (function(){
     var CART_KEY = 'tl_cart_v1';
+    var CK_KEY = 'tl_checkout_v1';
     function loadCart(){
       try{ return JSON.parse(localStorage.getItem(CART_KEY)) || {}; }catch(e){ return {}; }
     }
@@ -805,24 +824,6 @@
       });
     }
 
-    function buildWhatsLink(){
-      var lines = ['Olá! Vim do site da Théo Lorenzo Multimarcas TL e quero fazer esse pedido:', ''];
-      var total = 0, hasUnpriced = false;
-      Object.keys(cart).forEach(function(id){
-        var item = cart[id];
-        if(item.price != null){
-          total += item.price;
-          lines.push('- ' + item.name + ' - ' + money(item.price));
-        } else {
-          hasUnpriced = true;
-          lines.push('- ' + item.name + ' - a combinar');
-        }
-      });
-      lines.push('');
-      lines.push(hasUnpriced ? 'Total (itens com preço): ' + money(total) : 'Total: ' + money(total));
-      return 'https://wa.me/558681942709?text=' + encodeURIComponent(lines.join('\n'));
-    }
-
     function renderCart(){
       var ids = Object.keys(cart);
       if(ids.length === 0){
@@ -852,8 +853,9 @@
       var totalLine = hasUnpriced ? 'Total: ' + money(total) + ' + itens a combinar' : 'Total: ' + money(total);
       footerEl.innerHTML =
         '<p class="cart-total">' + totalLine + '</p>' +
-        '<a class="btn-whats large" target="_blank" rel="noopener" href="' + buildWhatsLink() + '">Finalizar pedido no WhatsApp</a>' +
+        '<button class="btn-whats large" id="cartConfirm" style="width:100%;justify-content:center;box-sizing:border-box;">Confirmar pedido</button>' +
         '<button class="cart-clear">Esvaziar carrinho</button>';
+      footerEl.querySelector('#cartConfirm').addEventListener('click', renderCheckout);
       footerEl.querySelector('.cart-clear').addEventListener('click', function(){
         cart = {};
         saveCart(cart);
@@ -863,6 +865,91 @@
           b.textContent = '🛒 Adicionar ao carrinho';
           b.classList.remove('in-cart');
         });
+      });
+    }
+
+    function renderCheckout(){
+      var saved = {};
+      try{ saved = JSON.parse(localStorage.getItem(CK_KEY)) || {}; }catch(e){}
+      var cities = ['São Miguel do Tapuio','Buriti dos Montes','Juazeiro do Piauí','Assunção do Piauí','Castelo do Piauí'];
+      var opts = '<option value="">Selecione a cidade...</option>';
+      cities.forEach(function(c){
+        opts += '<option' + (saved.city===c?' selected':'') + '>' + c + '</option>';
+      });
+      opts += '<option value="Outra"' + (saved.city==='Outra'?' selected':'') + '>Outra cidade</option>';
+
+      itemsEl.innerHTML =
+        '<button class="checkout-back" id="ckBack">← Voltar ao carrinho</button>' +
+        '<h4 class="checkout-title">Dados para entrega</h4>' +
+        '<label class="ck-label">Nome</label>' +
+        '<input class="ck-input" id="ckName" type="text" value="' + (saved.name||'') + '">' +
+        '<label class="ck-label">Cidade</label>' +
+        '<select class="ck-input" id="ckCity">' + opts + '</select>' +
+        '<div id="ckOtherWrap" style="display:' + (saved.city==='Outra'?'block':'none') + '">' +
+          '<label class="ck-label">Qual cidade?</label>' +
+          '<input class="ck-input" id="ckOtherCity" type="text" value="' + (saved.otherCity||'') + '">' +
+        '</div>' +
+        '<label class="ck-label">Bairro</label>' +
+        '<input class="ck-input" id="ckNeighborhood" type="text" value="' + (saved.neighborhood||'') + '">' +
+        '<div class="ck-row">' +
+          '<div class="ck-col"><label class="ck-label">Rua</label>' +
+            '<input class="ck-input" id="ckStreet" type="text" value="' + (saved.street||'') + '"></div>' +
+          '<div class="ck-col ck-col-num"><label class="ck-label">Nº</label>' +
+            '<input class="ck-input" id="ckNumber" type="text" value="' + (saved.number||'') + '"></div>' +
+        '</div>' +
+        '<label class="ck-label">Ponto de referência (opcional)</label>' +
+        '<input class="ck-input" id="ckRef" type="text" value="' + (saved.ref||'') + '">' +
+        '<p class="ck-error" id="ckError"></p>';
+
+      footerEl.innerHTML = '<button class="btn-whats large" id="ckSubmit" style="width:100%;justify-content:center;box-sizing:border-box;">Enviar pedido no WhatsApp</button>';
+
+      document.getElementById('ckBack').addEventListener('click', renderCart);
+      document.getElementById('ckCity').addEventListener('change', function(){
+        document.getElementById('ckOtherWrap').style.display = this.value === 'Outra' ? 'block' : 'none';
+      });
+      document.getElementById('ckSubmit').addEventListener('click', function(){
+        var name = document.getElementById('ckName').value.trim();
+        var city = document.getElementById('ckCity').value;
+        var otherCity = document.getElementById('ckOtherCity').value.trim();
+        var neighborhood = document.getElementById('ckNeighborhood').value.trim();
+        var street = document.getElementById('ckStreet').value.trim();
+        var number = document.getElementById('ckNumber').value.trim();
+        var ref = document.getElementById('ckRef').value.trim();
+        var cityFinal = city === 'Outra' ? otherCity : city;
+
+        if(!name || !cityFinal || !street || !number){
+          document.getElementById('ckError').textContent = 'Preenche nome, cidade, rua e número pra continuar.';
+          return;
+        }
+
+        localStorage.setItem(CK_KEY, JSON.stringify({
+          name:name, city:city, otherCity:otherCity, neighborhood:neighborhood,
+          street:street, number:number, ref:ref
+        }));
+
+        var lines = ['Olá! Vim do site da Théo Lorenzo Multimarcas TL e quero fazer esse pedido:', ''];
+        var total = 0, hasUnpriced = false;
+        Object.keys(cart).forEach(function(id){
+          var item = cart[id];
+          if(item.price != null){
+            total += item.price;
+            lines.push('- ' + item.name + ' - ' + money(item.price));
+          } else {
+            hasUnpriced = true;
+            lines.push('- ' + item.name + ' - a combinar');
+          }
+        });
+        lines.push('');
+        lines.push(hasUnpriced ? 'Total (itens com preço): ' + money(total) : 'Total: ' + money(total));
+        lines.push('');
+        lines.push('Dados para entrega:');
+        lines.push('Nome: ' + name);
+        lines.push('Cidade: ' + cityFinal);
+        if(neighborhood) lines.push('Bairro: ' + neighborhood);
+        lines.push('Rua: ' + street + ', nº ' + number);
+        if(ref) lines.push('Referência: ' + ref);
+
+        window.open('https://wa.me/558681942709?text=' + encodeURIComponent(lines.join('\n')), '_blank');
       });
     }
 
