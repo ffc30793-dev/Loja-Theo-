@@ -1585,20 +1585,22 @@ main{max-width:1180px;margin:auto;padding:0 12px 90px}
   var saved = localStorage.getItem('tl-theme');
   if(saved === 'light'){
     root.setAttribute('data-theme','light');
-    toggle.textContent = '☀️';
+    if(toggle) toggle.textContent = '☀️';
   }
-  toggle.addEventListener('click', function(){
-    var isLight = root.getAttribute('data-theme') === 'light';
-    if(isLight){
-      root.removeAttribute('data-theme');
-      toggle.textContent = '🌙';
-      localStorage.setItem('tl-theme','dark');
-    } else {
-      root.setAttribute('data-theme','light');
-      toggle.textContent = '☀️';
-      localStorage.setItem('tl-theme','light');
-    }
-  });
+  if(toggle){
+    toggle.addEventListener('click', function(){
+      var isLight = root.getAttribute('data-theme') === 'light';
+      if(isLight){
+        root.removeAttribute('data-theme');
+        toggle.textContent = '🌙';
+        localStorage.setItem('tl-theme','dark');
+      } else {
+        root.setAttribute('data-theme','light');
+        toggle.textContent = '☀️';
+        localStorage.setItem('tl-theme','light');
+      }
+    });
+  }
 
   // ===== carrinho de compras =====
   (function(){
