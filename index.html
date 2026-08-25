@@ -854,15 +854,21 @@ footer{background:#fafafa;border-top:1px solid var(--line);padding:30px 15px;tex
       startX = null;
     }, {passive:true});
 
-    document.querySelectorAll('.product-card .thumb').forEach(function(thumb){
-      thumb.addEventListener('click', function(){
-        var imgEls = Array.prototype.slice.call(thumb.querySelectorAll('img'));
-        if(imgEls.length === 0) return;
-        var activeImg = thumb.querySelector('img.active');
-        var startIdx = activeImg ? imgEls.indexOf(activeImg) : 0;
-        openLightbox(imgEls, startIdx);
+    function attachLightbox(root){
+      (root || document).querySelectorAll('.product-card .thumb').forEach(function(thumb){
+        if(thumb.dataset.lbBound) return; // já tem o clique, evita duplicar
+        thumb.dataset.lbBound = '1';
+        thumb.addEventListener('click', function(){
+          var imgEls = Array.prototype.slice.call(thumb.querySelectorAll('img'));
+          if(imgEls.length === 0) return;
+          var activeImg = thumb.querySelector('img.active');
+          var startIdx = activeImg ? imgEls.indexOf(activeImg) : 0;
+          openLightbox(imgEls, startIdx);
+        });
       });
-    });
+    }
+    attachLightbox(document);
+    window.TL_attachLightbox = attachLightbox;
   })();
 
 
@@ -1211,6 +1217,7 @@ footer{background:#fafafa;border-top:1px solid var(--line);padding:30px 15px;tex
         '</article>';
       }).join('');
       if(window.TL_attachCartButtons) window.TL_attachCartButtons(el);
+      if(window.TL_attachLightbox) window.TL_attachLightbox(el);
     }
     var priced=all.filter(function(x){return x.data.price!=='Consultar preço';});
     renderMini('offerProducts', priced.slice().reverse().slice(0,4).map(function(x){return x.data;}));
