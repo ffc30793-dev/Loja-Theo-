@@ -101,6 +101,53 @@ html[data-theme="dark"] .bottom-nav button.active{color:#f2f2f2}
 .theme-toggle{display:flex!important;border:0;background:transparent;width:38px;height:38px;align-items:center;justify-content:center;font-size:20px;color:#111;padding:0;margin-left:2px}
 @media(max-width:390px){.brand-text h1{font-size:18px;letter-spacing:2px}.tabs{gap:18px}.circle-row{gap:11px}.home-products{gap:5px}}
 </style>
+
+<style id="product-detail-style">
+/* Detalhes do produto — visual inspirado em marketplaces, sem alterar o catálogo */
+.product-card{cursor:pointer}
+.product-card .btn-whats,.product-card .btn-cart,.product-card .gal-prev,.product-card .gal-next,.product-card .gal-dots{cursor:pointer}
+.product-detail-overlay{position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.58);display:none;align-items:flex-end;justify-content:center}
+.product-detail-overlay.open{display:flex}
+.product-detail-modal{width:min(720px,100%);max-height:94vh;overflow:auto;background:#fff;border-radius:18px 18px 0 0;box-shadow:0 -10px 40px rgba(0,0,0,.25);animation:pdUp .22s ease}
+@keyframes pdUp{from{transform:translateY(30px);opacity:.6}to{transform:translateY(0);opacity:1}}
+.pd-top{position:sticky;top:0;z-index:3;display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#fff;border-bottom:1px solid #eee}
+.pd-back{border:0;background:#f4f4f4;border-radius:50%;width:38px;height:38px;font-size:22px;line-height:38px;cursor:pointer}
+.pd-top-title{font-size:13px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin:0 10px}
+.pd-close{border:0;background:transparent;font-size:27px;line-height:1;cursor:pointer}
+.pd-main{padding:0 0 22px}
+.pd-gallery{background:#f6f6f6}
+.pd-main-image-wrap{position:relative;aspect-ratio:1/1;max-height:56vh;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.pd-main-image{width:100%;height:100%;object-fit:contain;display:block}
+.pd-arrow{position:absolute;top:50%;transform:translateY(-50%);border:0;background:rgba(0,0,0,.48);color:#fff;width:38px;height:38px;border-radius:50%;font-size:24px;cursor:pointer}
+.pd-arrow.left{left:10px}.pd-arrow.right{right:10px}
+.pd-dots{display:flex;justify-content:center;gap:6px;padding:9px}
+.pd-dot{width:7px;height:7px;border-radius:50%;background:#cfcfcf;border:0;padding:0}
+.pd-dot.active{background:#111}
+.pd-thumbs{display:flex;gap:7px;padding:0 10px 10px;overflow-x:auto;background:#f6f6f6}
+.pd-thumb{width:62px;height:62px;flex:0 0 62px;border:1px solid #ddd;background:#fff;border-radius:7px;padding:2px;overflow:hidden;cursor:pointer}
+.pd-thumb.active{border:2px solid #111}
+.pd-thumb img{width:100%;height:100%;object-fit:cover;border-radius:5px}
+.pd-info{padding:17px 16px 0}
+.pd-name{font-size:22px;line-height:1.15;margin:0 0 7px;font-weight:900}
+.pd-price{font-size:25px;font-weight:900;margin:7px 0}
+.pd-status{font-size:12px;color:#16803c;margin:0 0 15px;font-weight:700}
+.pd-desc{font-size:13px;line-height:1.5;color:#555;margin:0 0 17px}
+.pd-section{border-top:1px solid #eee;padding:14px 0}
+.pd-label{font-size:12px;font-weight:900;margin:0 0 9px}
+.pd-chips{display:flex;flex-wrap:wrap;gap:7px}
+.pd-chip{border:1px solid #ccc;background:#fff;border-radius:7px;padding:9px 12px;font-size:12px}
+.pd-chip.selected{border:2px solid #111;padding:8px 11px;font-weight:800}
+.pd-buy{display:flex;gap:8px;margin-top:18px}
+.pd-buy a{flex:1;text-decoration:none;text-align:center;padding:14px 10px;border-radius:7px;font-size:13px;font-weight:900}
+.pd-buy .pd-wa{background:#111;color:#fff}
+.pd-buy .pd-cart{background:#fff;color:#111;border:1px solid #111}
+.pd-note{font-size:10px;color:#888;text-align:center;margin:11px 0 0}
+@media(max-width:420px){
+  .pd-name{font-size:20px}.pd-price{font-size:23px}
+  .product-detail-modal{max-height:96vh}
+}
+</style>
+
 </head>
 <body>
 
@@ -1348,6 +1395,191 @@ html[data-theme="dark"] .bottom-nav button.active{color:#f2f2f2}
     document.querySelectorAll('.section-title [data-tab]').forEach(function(b){b.addEventListener('click',function(e){e.preventDefault();goToTab(b.dataset.tab);});});
   })();
 
+</script>
+
+
+<div class="product-detail-overlay" id="productDetailOverlay" aria-hidden="true">
+  <div class="product-detail-modal" role="dialog" aria-modal="true" aria-label="Detalhes do produto">
+    <div class="pd-top">
+      <button class="pd-back" id="pdBack" aria-label="Voltar">‹</button>
+      <p class="pd-top-title" id="pdTopTitle">Produto</p>
+      <button class="pd-close" id="pdClose" aria-label="Fechar">×</button>
+    </div>
+    <div class="pd-main">
+      <div class="pd-gallery">
+        <div class="pd-main-image-wrap">
+          <button class="pd-arrow left" id="pdPrev" aria-label="Foto anterior">‹</button>
+          <img class="pd-main-image" id="pdMainImage" src="" alt="">
+          <button class="pd-arrow right" id="pdNext" aria-label="Próxima foto">›</button>
+        </div>
+        <div class="pd-dots" id="pdDots"></div>
+        <div class="pd-thumbs" id="pdThumbs"></div>
+      </div>
+      <div class="pd-info">
+        <h2 class="pd-name" id="pdName"></h2>
+        <p class="pd-price" id="pdPrice"></p>
+        <p class="pd-status" id="pdStatus"></p>
+        <p class="pd-desc" id="pdDesc"></p>
+        <div class="pd-section" id="pdVariantsSection" style="display:none">
+          <p class="pd-label" id="pdVariantsLabel">Opções</p>
+          <div class="pd-chips" id="pdVariants"></div>
+        </div>
+        <div class="pd-buy">
+          <a class="pd-wa" id="pdWhats" href="#" target="_blank" rel="noopener">PEDIR PELO WHATSAPP</a>
+          <a class="pd-cart" id="pdCart" href="#">ADICIONAR AO CARRINHO</a>
+        </div>
+        <p class="pd-note">Escolha as opções disponíveis e confirme o pedido pelo WhatsApp.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<script id="product-detail-script">
+(function(){
+  function ready(fn){
+    if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded',fn);
+    else fn();
+  }
+  ready(function(){
+    var overlay=document.getElementById('productDetailOverlay');
+    if(!overlay) return;
+    var main=document.getElementById('pdMainImage');
+    var dots=document.getElementById('pdDots');
+    var thumbs=document.getElementById('pdThumbs');
+    var nameEl=document.getElementById('pdName');
+    var topTitle=document.getElementById('pdTopTitle');
+    var priceEl=document.getElementById('pdPrice');
+    var statusEl=document.getElementById('pdStatus');
+    var descEl=document.getElementById('pdDesc');
+    var variantsSection=document.getElementById('pdVariantsSection');
+    var variantsEl=document.getElementById('pdVariants');
+    var variantsLabel=document.getElementById('pdVariantsLabel');
+    var wa=document.getElementById('pdWhats');
+    var cart=document.getElementById('pdCart');
+    var current=0, images=[], currentCard=null;
+
+    function text(el){return el ? el.textContent.trim() : '';}
+    function escapeHtml(s){return String(s||'').replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+
+    function extractOptions(card){
+      var allText=(card.innerText||'').replace(/\s+/g,' ');
+      var options=[];
+      var sizes=allText.match(/(?:tam(?:anho)?\.?\s*)(PP|P|M|G|GG|XG|XXG)\b/ig)||[];
+      sizes.forEach(function(x){
+        var v=x.replace(/.*(?:tam(?:anho)?\.?\s*)/i,'').toUpperCase();
+        if(options.indexOf(v)<0) options.push(v);
+      });
+      var colorWords=['preto','branco','vermelho','azul','verde','amarelo','rosa','bege','marrom','cinza','roxo','lilás','laranja','mostarda'];
+      colorWords.forEach(function(c){
+        if(allText.toLowerCase().indexOf(c)>=0 && options.indexOf(c)<0) options.push(c);
+      });
+      return options;
+    }
+
+    function renderGallery(){
+      if(!images.length) return;
+      current=(current+images.length)%images.length;
+      main.src=images[current].src;
+      main.alt=images[current].alt||text(nameEl);
+      dots.innerHTML=images.map(function(_,i){
+        return '<button class="pd-dot '+(i===current?'active':'')+'" aria-label="Foto '+(i+1)+'"></button>';
+      }).join('');
+      thumbs.innerHTML=images.map(function(im,i){
+        return '<button class="pd-thumb '+(i===current?'active':'')+'" aria-label="Ver foto '+(i+1)+'"><img src="'+im.src+'" alt=""></button>';
+      }).join('');
+      Array.prototype.forEach.call(dots.children,function(b,i){b.addEventListener('click',function(){current=i;renderGallery();});});
+      Array.prototype.forEach.call(thumbs.children,function(b,i){b.addEventListener('click',function(){current=i;renderGallery();});});
+    }
+
+    function openProduct(card){
+      currentCard=card;
+      var imgs=Array.prototype.slice.call(card.querySelectorAll('.thumb img'));
+      images=imgs.map(function(im){return {src:im.src,alt:im.alt||''};});
+      current=0;
+
+      var h=card.querySelector('h3'), p=card.querySelector('.price'), d=card.querySelector('.desc'), btn=card.querySelector('.btn-whats');
+      var n=text(h)||'Produto';
+      var pr=text(p)||'Consultar preço';
+      var de=text(d)||'Confira os detalhes deste produto.';
+      nameEl.textContent=n;
+      topTitle.textContent=n;
+      priceEl.textContent=pr;
+      descEl.textContent=de;
+      statusEl.textContent=(pr && pr!=='Consultar preço') ? 'Disponível' : 'Consulte a disponibilidade';
+      wa.href=btn ? (btn.getAttribute('href')||'#') : '#';
+
+      var opts=extractOptions(card);
+      variantsEl.innerHTML='';
+      if(opts.length){
+        variantsSection.style.display='';
+        variantsLabel.textContent=opts.some(function(x){return /^(PP|P|M|G|GG|XG|XXG)$/.test(x);}) ? 'Opções disponíveis' : 'Detalhes';
+        opts.forEach(function(v,i){
+          var b=document.createElement('button');
+          b.className='pd-chip'+(i===0?' selected':'');
+          b.type='button';
+          b.textContent=v;
+          b.addEventListener('click',function(){
+            Array.prototype.forEach.call(variantsEl.children,function(x){x.classList.remove('selected');});
+            b.classList.add('selected');
+          });
+          variantsEl.appendChild(b);
+        });
+      }else{
+        variantsSection.style.display='none';
+      }
+
+      cart.onclick=function(e){
+        e.preventDefault();
+        var original=card.querySelector('.btn-cart');
+        if(original){ original.click(); }
+        else { alert('Produto selecionado: '+n); }
+      };
+
+      renderGallery();
+      overlay.classList.add('open');
+      overlay.setAttribute('aria-hidden','false');
+      document.body.style.overflow='hidden';
+    }
+
+    function closeProduct(){
+      overlay.classList.remove('open');
+      overlay.setAttribute('aria-hidden','true');
+      document.body.style.overflow='';
+      currentCard=null;
+    }
+
+    document.getElementById('pdClose').addEventListener('click',closeProduct);
+    document.getElementById('pdBack').addEventListener('click',closeProduct);
+    overlay.addEventListener('click',function(e){if(e.target===overlay) closeProduct();});
+    document.getElementById('pdPrev').addEventListener('click',function(){if(images.length>1){current--;renderGallery();}});
+    document.getElementById('pdNext').addEventListener('click',function(){if(images.length>1){current++;renderGallery();}});
+    document.addEventListener('keydown',function(e){if(e.key==='Escape' && overlay.classList.contains('open'))closeProduct();});
+
+    /* Captura antes do lightbox existente: clicar na foto abre os detalhes.
+       As setas/dots da galeria original continuam funcionando normalmente. */
+    document.addEventListener('click',function(e){
+      if(overlay.classList.contains('open')) return;
+      var thumb=e.target.closest('.product-card .thumb');
+      if(!thumb) return;
+      if(e.target.closest('.gal-prev,.gal-next,.gal-dots')) return;
+      if(!e.target.closest('img')) return;
+      var card=thumb.closest('.product-card');
+      if(!card) return;
+      e.preventDefault();
+      e.stopPropagation();
+      openProduct(card);
+    },true);
+
+    /* Também permite abrir pelo nome/área do card, sem interferir nos botões. */
+    document.addEventListener('click',function(e){
+      if(overlay.classList.contains('open')) return;
+      var card=e.target.closest('.product-card');
+      if(!card || e.target.closest('a,button,.thumb')) return;
+      openProduct(card);
+    });
+  });
+})();
 </script>
 
 </body>
