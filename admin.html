@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Painel — TL Multimarcas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #EFEDE7;
+    --panel: #FFFFFF;
+    --ink: #241726;
+    --ink-soft: #6E6474;
+    --plum: #241726;
+    --plum-light: #382A3B;
+    --mustard: #D6A419;
+    --mustard-dark: #B3860F;
+    --success: #3F7D5C;
+    --danger: #B84A3E;
+    --border: #E2DFD8;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: 'Inter', sans-serif; background: var(--bg); color: var(--ink); }
+  h1, h2, h3, .brand { font-family: 'Space Grotesk', sans-serif; }
+
+  /* ---------- LOGIN ---------- */
+  #login-screen {
+    min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px;
+    position: relative; overflow: hidden; background: #07040F;
+  }
+  #login-screen::before, #login-screen::after {
+    content: ''; position: absolute; top: 50%; width: 340px; height: 480px; border-radius: 50%;
+    filter: blur(70px); transform: translateY(-50%); z-index: 0;
+  }
+  #login-screen::before { left: -120px; background: radial-gradient(circle, rgba(139,60,220,0.55), transparent 70%); }
+  #login-screen::after { right: -120px; background: radial-gradient(circle, rgba(107,42,214,0.5), transparent 70%); }
+
+  .login-card {
+    position: relative; z-index: 1;
+    background: rgba(28, 18, 46, 0.55); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+    border-radius: 24px; padding: 44px 32px; width: 100%; max-width: 380px;
+    border: 1px solid rgba(255,255,255,0.14);
+    box-shadow: 0 25px 70px rgba(0,0,0,0.55), 0 0 50px rgba(124,58,237,0.12);
+  }
+  .login-card .brand {
+    font-size: 26px; font-weight: 700; letter-spacing: 0.08em; text-align: center; margin: 0 0 28px;
+    background: linear-gradient(135deg, #FFFFFF, #C9B8F5); -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .login-card h1 {
+    font-family: 'Poppins', sans-serif; font-weight: 500; font-size: 22px; text-align: center;
+    margin: 0 0 30px; color: #D9CCF7;
+  }
+  .field { margin-bottom: 18px; }
+  .field label { display: block; font-size: 13px; color: #B6AAD1; margin-bottom: 7px; }
+  .field input {
+    width: 100%; padding: 13px 14px; border: 1px solid rgba(255,255,255,0.18); border-radius: 12px; font-size: 14px;
+    font-family: inherit; background: rgba(255,255,255,0.05); color: #F1ECFB;
+  }
+  .field input::placeholder { color: #7C7196; }
+  .field input:focus { outline: none; border-color: #A855F7; box-shadow: 0 0 0 3px rgba(168,85,247,0.25); }
+  .password-wrap { position: relative; }
+  .password-wrap input { padding-right: 40px; }
+  .toggle-password {
+    position: absolute; right: 4px; top: 50%; transform: translateY(-50%);
+    background: none; border: none; cursor: pointer; font-size: 16px; padding: 6px 8px;
+    color: #9384B5; line-height: 1;
+  }
+  .toggle-password:hover { color: #F1ECFB; }
+  .btn {
+    border: none; border-radius: 12px; padding: 13px 18px; font-family: 'Inter', sans-serif; font-weight: 600;
+    font-size: 15px; cursor: pointer; transition: transform 0.08s ease;
+  }
+  .btn:active { transform: scale(0.98); }
+  .btn-primary {
+    background: linear-gradient(135deg, #7C3AED, #A855F7); color: #fff; width: 100%; margin-top: 6px;
+    box-shadow: 0 10px 30px rgba(124,58,237,0.45);
+  }
+  .btn-primary:hover { background: linear-gradient(135deg, #6D2FE0, #9B3FF0); }
+  .login-footer { text-align: center; font-size: 13px; color: #8A7FAA; margin-top: 26px; }
+  .login-error { color: #F17C8B; font-size: 13px; margin-top: 14px; min-height: 16px; text-align: center; }
+
+  /* ---------- APP SHELL ---------- */
+  #app { display: none; min-height: 100vh; }
+  #app.visible { display: flex; }
+  .sidebar {
+    width: 220px; background: var(--plum); color: #F1EEF2; padding: 28px 20px; flex-shrink: 0;
+    display: flex; flex-direction: column;
+  }
+  .sidebar .brand { font-size: 17px; margin: 0 0 2px; color: #fff; }
+  .sidebar .sub { font-size: 12px; color: #B4A6B8; margin: 0 0 36px; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px; font-size: 14px;
+    color: #E6DEE8; background: var(--plum-light); margin-bottom: 6px;
+  }
+  .sidebar-footer { margin-top: auto; }
+  .logout-btn {
+    background: none; border: 1px solid #4A3A4D; color: #C9BFCC; font-size: 13px; padding: 9px 12px;
+    border-radius: 8px; cursor: pointer; width: 100%; font-family: inherit;
+  }
+  .logout-btn:hover { border-color: #6E5A72; color: #fff; }
+
+  .main { flex: 1; padding: 32px 36px; max-width: 1100px; }
+  .main-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 28px; gap: 16px; }
+  .main-header h1 { font-size: 24px; margin: 0 0 4px; }
+  .main-header p { color: var(--ink-soft); margin: 0; font-size: 14px; }
+  .btn-add { background: var(--plum); color: #fff; }
+  .btn-add:hover { background: var(--plum-light); }
+
+  .empty-state {
+    text-align: center; padding: 60px 20px; color: var(--ink-soft); border: 1px dashed var(--border);
+    border-radius: var(--radius); font-size: 14px;
+  }
+
+  .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
+  .product-card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+  .product-thumb {
+    width: 100%; aspect-ratio: 1; background: #E9E6DF; display: flex; align-items: center; justify-content: center;
+    color: var(--ink-soft); font-size: 12px; overflow: hidden;
+  }
+  .product-thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .product-info { padding: 14px; flex: 1; display: flex; flex-direction: column; gap: 4px; }
+  .product-cat { font-size: 11px; color: var(--ink-soft); }
+  .product-name { font-size: 14px; font-weight: 600; margin: 0; }
+  .product-price { font-family: 'Space Grotesk', sans-serif; font-size: 15px; color: var(--plum); }
+  .product-footer { display: flex; justify-content: space-between; align-items: center; padding: 0 14px 14px; }
+  .badge {
+    font-size: 11px; padding: 3px 8px; border-radius: 20px; font-weight: 600;
+  }
+  .badge-on { background: #E4F0E8; color: var(--success); }
+  .badge-off { background: #F3E7E5; color: var(--danger); }
+  .card-actions { display: flex; gap: 6px; }
+  .icon-btn {
+    border: 1px solid var(--border); background: #fff; border-radius: 6px; width: 30px; height: 30px;
+    cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px;
+  }
+  .icon-btn:hover { background: #F5F3EF; }
+
+  /* ---------- FORM PANEL ---------- */
+  .overlay {
+    position: fixed; inset: 0; background: rgba(36, 23, 38, 0.35); display: none; z-index: 10;
+  }
+  .overlay.visible { display: block; }
+  .form-panel {
+    position: fixed; top: 0; right: 0; height: 100vh; width: 380px; max-width: 92vw; background: var(--panel);
+    z-index: 11; transform: translateX(100%); transition: transform 0.22s ease; padding: 28px; overflow-y: auto;
+  }
+  .form-panel.visible { transform: translateX(0); }
+  .form-panel h2 { font-size: 19px; margin: 0 0 20px; }
+  .form-row { margin-bottom: 14px; }
+  .form-row label { display: block; font-size: 13px; color: var(--ink-soft); margin-bottom: 6px; }
+  .form-row input, .form-row textarea, .form-row select {
+    width: 100%; padding: 10px 11px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px;
+    font-family: inherit; background: #FBFAF8;
+  }
+  .form-row textarea { resize: vertical; min-height: 70px; }
+  .form-row-inline { display: flex; gap: 10px; }
+  .toggle-row { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
+  .form-actions { display: flex; gap: 10px; margin-top: 22px; }
+  .btn-secondary { background: #F1EEE8; color: var(--ink); }
+  .thumb-preview {
+    width: 100%; aspect-ratio: 16/10; background: #E9E6DF; border-radius: 8px; margin-bottom: 12px;
+    display: flex; align-items: center; justify-content: center; overflow: hidden; color: var(--ink-soft); font-size: 12px;
+  }
+  .thumb-preview img { width: 100%; height: 100%; object-fit: cover; }
+  .form-status { font-size: 13px; margin-top: 10px; min-height: 16px; }
+  .form-status.err { color: var(--danger); }
+  .form-status.ok { color: var(--success); }
+</style>
+</head>
+<body>
+
+<!-- ================= LOGIN ================= -->
+<div id="login-screen">
+  <div class="login-card">
+    <p class="brand">TL</p>
+    <h1>Bem-vindo de volta</h1>
+    <div class="field">
+      <label for="login-email">E-mail</label>
+      <input type="email" id="login-email" autocomplete="username" placeholder="seuemail@gmail.com">
+    </div>
+    <div class="field">
+      <label for="login-password">Senha</label>
+      <div class="password-wrap">
+        <input type="password" id="login-password" autocomplete="current-password" placeholder="••••••••••">
+        <button type="button" class="toggle-password" id="toggle-login-password" aria-label="Mostrar senha">👁</button>
+      </div>
+    </div>
+    <button class="btn btn-primary" id="login-btn">Entrar</button>
+    <p class="login-error" id="login-error"></p>
+    <p class="login-footer">Painel administrativo — TL Multimarcas</p>
+  </div>
+</div>
+
+<!-- ================= APP ================= -->
+<div id="app">
+  <aside class="sidebar">
+    <p class="brand">TL Multimarcas</p>
+    <p class="sub">Painel administrativo</p>
+    <div class="nav-item">🛍️ Produtos</div>
+    <div class="sidebar-footer">
+      <button class="logout-btn" id="logout-btn">Sair</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="main-header">
+      <div>
+        <h1>Produtos</h1>
+        <p>Adicione, edite ou remova produtos da loja em tempo real.</p>
+      </div>
+      <button class="btn btn-add" id="open-add-btn">+ Novo produto</button>
+    </div>
+
+    <div id="empty-state" class="empty-state" style="display:none;">
+      Nenhum produto cadastrado ainda. Clique em "Novo produto" para começar.
+    </div>
+
+    <div class="product-grid" id="product-grid"></div>
+  </main>
+</div>
+
+<!-- ================= FORM PANEL ================= -->
+<div class="overlay" id="overlay"></div>
+<div class="form-panel" id="form-panel">
+  <h2 id="form-title">Novo produto</h2>
+  <input type="hidden" id="product-id">
+
+  <div class="thumb-preview" id="thumb-preview">Sem imagem</div>
+  <div class="form-row">
+    <label for="product-image">Foto do produto</label>
+    <input type="file" id="product-image" accept="image/*">
+  </div>
+
+  <div class="form-row">
+    <label for="product-name">Nome</label>
+    <input type="text" id="product-name" placeholder="Ex: Camisa social slim fit">
+  </div>
+
+  <div class="form-row-inline">
+    <div class="form-row" style="flex:1">
+      <label for="product-price">Preço (R$)</label>
+      <input type="number" id="product-price" step="0.01" placeholder="0,00">
+    </div>
+    <div class="form-row" style="flex:1">
+      <label for="product-category">Categoria</label>
+      <input type="text" id="product-category" placeholder="Ex: Camisas">
+    </div>
+  </div>
+
+  <div class="form-row">
+    <label for="product-desc">Descrição</label>
+    <textarea id="product-desc" placeholder="Detalhes, tecido, tamanhos disponíveis..."></textarea>
+  </div>
+
+  <div class="toggle-row">
+    <input type="checkbox" id="product-available" checked style="width:16px;height:16px;">
+    <label for="product-available" style="margin:0;">Disponível na loja</label>
+  </div>
+
+  <div class="form-actions">
+    <button class="btn btn-primary" id="save-btn" style="flex:1;">Salvar</button>
+    <button class="btn btn-secondary" id="cancel-btn">Cancelar</button>
+  </div>
+  <p class="form-status" id="form-status"></p>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import {
+  getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+import {
+  getFirestore, collection, addDoc, updateDoc, deleteDoc, doc,
+  onSnapshot, query, orderBy, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+import {
+  getStorage, ref, uploadBytes, getDownloadURL, deleteObject
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-storage.js";
+
+// =====================================================================
+// PREENCHA com a config do SEU projeto Firebase (Configurações do
+// projeto > Seus apps > SDK do Firebase). Pode ser o mesmo projeto
+// que você já usa no site da Odonto, ou um novo só para a TL.
+// =====================================================================
+const firebaseConfig = {
+  apiKey: "AIzaSyCIk8rFLqO8diN8klO9V3NwnSra6pV_WO0",
+  authDomain: "painel-administrativo-aaf11.firebaseapp.com",
+  projectId: "painel-administrativo-aaf11",
+  storageBucket: "painel-administrativo-aaf11.firebasestorage.app",
+  messagingSenderId: "27717286344",
+  appId: "1:27717286344:web:60899ccb213c565056e8fd"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const storage = getStorage(app);
+
+// ---------------- LOGIN ----------------
+const loginScreen = document.getElementById('login-screen');
+const appEl = document.getElementById('app');
+const loginBtn = document.getElementById('login-btn');
+const loginError = document.getElementById('login-error');
+
+loginBtn.addEventListener('click', async () => {
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  loginError.textContent = '';
+  try {
+    await signInWithEmailAndPassword(auth, email, password);
+  } catch (e) {
+    loginError.textContent = 'E-mail ou senha inválidos.';
+  }
+});
+
+document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
+
+const togglePasswordBtn = document.getElementById('toggle-login-password');
+const loginPasswordInput = document.getElementById('login-password');
+togglePasswordBtn.addEventListener('click', () => {
+  const isHidden = loginPasswordInput.type === 'password';
+  loginPasswordInput.type = isHidden ? 'text' : 'password';
+  togglePasswordBtn.textContent = isHidden ? '🙈' : '👁';
+  togglePasswordBtn.setAttribute('aria-label', isHidden ? 'Esconder senha' : 'Mostrar senha');
+});
+
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    loginScreen.style.display = 'none';
+    appEl.classList.add('visible');
+    startProductListener();
+  } else {
+    loginScreen.style.display = 'flex';
+    appEl.classList.remove('visible');
+  }
+});
+
+// ---------------- PRODUTOS (tempo real) ----------------
+const grid = document.getElementById('product-grid');
+const emptyState = document.getElementById('empty-state');
+let unsubscribe = null;
+
+function startProductListener() {
+  if (unsubscribe) return;
+  const q = query(collection(db, 'produtos'), orderBy('criadoEm', 'desc'));
+  unsubscribe = onSnapshot(q, (snapshot) => {
+    grid.innerHTML = '';
+    if (snapshot.empty) {
+      emptyState.style.display = 'block';
+      return;
+    }
+    emptyState.style.display = 'none';
+    snapshot.forEach((docSnap) => {
+      const p = docSnap.data();
+      grid.appendChild(renderCard(docSnap.id, p));
+    });
+  });
+}
+
+function renderCard(id, p) {
+  const card = document.createElement('div');
+  card.className = 'product-card';
+  card.innerHTML = `
+    <div class="product-thumb">${p.imagemUrl ? `<img src="${p.imagemUrl}" alt="${p.nome || ''}">` : 'Sem imagem'}</div>
+    <div class="product-info">
+      <span class="product-cat">${escapeHtml(p.categoria || '')}</span>
+      <p class="product-name">${escapeHtml(p.nome || '')}</p>
+      <span class="product-price">R$ ${Number(p.preco || 0).toFixed(2)}</span>
+    </div>
+    <div class="product-footer">
+      <span class="badge ${p.disponivel ? 'badge-on' : 'badge-off'}">${p.disponivel ? 'Disponível' : 'Indisponível'}</span>
+      <div class="card-actions">
+        <button class="icon-btn edit-btn" title="Editar">✎</button>
+        <button class="icon-btn delete-btn" title="Remover">🗑</button>
+      </div>
+    </div>
+  `;
+  card.querySelector('.edit-btn').addEventListener('click', () => openForm(id, p));
+  card.querySelector('.delete-btn').addEventListener('click', () => deleteProduct(id, p));
+  return card;
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// ---------------- FORM (adicionar/editar) ----------------
+const overlay = document.getElementById('overlay');
+const formPanel = document.getElementById('form-panel');
+const formTitle = document.getElementById('form-title');
+const formStatus = document.getElementById('form-status');
+const thumbPreview = document.getElementById('thumb-preview');
+let selectedFile = null;
+let editingId = null;
+let editingImageUrl = null;
+
+document.getElementById('open-add-btn').addEventListener('click', () => openForm());
+document.getElementById('cancel-btn').addEventListener('click', closeForm);
+overlay.addEventListener('click', closeForm);
+
+document.getElementById('product-image').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  selectedFile = file;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    thumbPreview.innerHTML = `<img src="${ev.target.result}">`;
+  };
+  reader.readAsDataURL(file);
+});
+
+function openForm(id = null, p = null) {
+  editingId = id;
+  editingImageUrl = p ? p.imagemUrl : null;
+  selectedFile = null;
+  formStatus.textContent = '';
+  formTitle.textContent = id ? 'Editar produto' : 'Novo produto';
+  document.getElementById('product-name').value = p ? p.nome || '' : '';
+  document.getElementById('product-price').value = p ? p.preco || '' : '';
+  document.getElementById('product-category').value = p ? p.categoria || '' : '';
+  document.getElementById('product-desc').value = p ? p.descricao || '' : '';
+  document.getElementById('product-available').checked = p ? !!p.disponivel : true;
+  document.getElementById('product-image').value = '';
+  thumbPreview.innerHTML = p && p.imagemUrl ? `<img src="${p.imagemUrl}">` : 'Sem imagem';
+  overlay.classList.add('visible');
+  formPanel.classList.add('visible');
+}
+
+function closeForm() {
+  overlay.classList.remove('visible');
+  formPanel.classList.remove('visible');
+}
+
+document.getElementById('save-btn').addEventListener('click', async () => {
+  const nome = document.getElementById('product-name').value.trim();
+  const preco = parseFloat(document.getElementById('product-price').value);
+  const categoria = document.getElementById('product-category').value.trim();
+  const descricao = document.getElementById('product-desc').value.trim();
+  const disponivel = document.getElementById('product-available').checked;
+
+  if (!nome || isNaN(preco)) {
+    formStatus.className = 'form-status err';
+    formStatus.textContent = 'Preencha ao menos nome e preço.';
+    return;
+  }
+
+  formStatus.className = 'form-status';
+  formStatus.textContent = 'Salvando...';
+
+  try {
+    let imagemUrl = editingImageUrl || null;
+
+    if (selectedFile) {
+      const path = `produtos/${Date.now()}_${selectedFile.name}`;
+      const storageRef = ref(storage, path);
+      await uploadBytes(storageRef, selectedFile);
+      imagemUrl = await getDownloadURL(storageRef);
+    }
+
+    const data = { nome, preco, categoria, descricao, disponivel, imagemUrl };
+
+    if (editingId) {
+      await updateDoc(doc(db, 'produtos', editingId), data);
+    } else {
+      data.criadoEm = serverTimestamp();
+      await addDoc(collection(db, 'produtos'), data);
+    }
+
+    formStatus.className = 'form-status ok';
+    formStatus.textContent = 'Salvo!';
+    setTimeout(closeForm, 500);
+  } catch (e) {
+    formStatus.className = 'form-status err';
+    formStatus.textContent = 'Erro ao salvar. Tente novamente.';
+    console.error(e);
+  }
+});
+
+async function deleteProduct(id, p) {
+  if (!confirm(`Remover "${p.nome}"? Essa ação não pode ser desfeita.`)) return;
+  try {
+    await deleteDoc(doc(db, 'produtos', id));
+    if (p.imagemUrl) {
+      try {
+        const path = decodeURIComponent(p.imagemUrl.split('/o/')[1].split('?')[0]);
+        await deleteObject(ref(storage, path));
+      } catch (imgErr) { /* imagem pode já não existir, ignora */ }
+    }
+  } catch (e) {
+    alert('Erro ao remover produto.');
+    console.error(e);
+  }
+}
+</script>
+</body>
+</html>
