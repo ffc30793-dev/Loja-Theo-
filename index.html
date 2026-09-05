@@ -1689,5 +1689,97 @@ html[data-theme="dark"] .bottom-nav button.active{color:#f2f2f2}
 })();
 </script>
 
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import { getFirestore, collection, query, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCIk8rFLqO8diN8klO9V3NwnSra6pV_WO0",
+  authDomain: "painel-administrativo-aaf11.firebaseapp.com",
+  projectId: "painel-administrativo-aaf11",
+  storageBucket: "painel-administrativo-aaf11.firebasestorage.app",
+  messagingSenderId: "27717286344",
+  appId: "1:27717286344:web:60899ccb213c565056e8fd"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+// Mapeia o texto de categoria digitado no painel pro id da seção do site
+const categoriaParaSecao = {
+  'feminino': 'vestidos',
+  'vestidos': 'vestidos',
+  'pijamas': 'pijamas',
+  'beleza e saude': 'beleza',
+  'beleza': 'beleza',
+  'masculino': 'camisas',
+  'camisas': 'camisas',
+  'casa & decoracao': 'casa',
+  'casa e decoracao': 'casa',
+  'casa': 'casa',
+  'eletronicos': 'eletronicos',
+  'bolsas e malas': 'bolsas',
+  'bolsas': 'bolsas',
+  'garrafas': 'garrafas',
+  'calcados/shorts': 'shorts',
+  'calcados': 'shorts',
+  'shorts': 'shorts'
+};
+
+function normalizar(txt) {
+  return (txt || '').toString().trim().toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+function montarCard(p) {
+  const nome = p.nome || 'Produto';
+  const precoTexto = typeof p.preco === 'number'
+    ? 'R$ ' + p.preco.toFixed(2).replace('.', ',')
+    : 'Consultar preço';
+  const mensagem = encodeURIComponent(`Olá! Tenho interesse no produto ${nome}. Ainda tem?`);
+  const article = document.createElement('article');
+  article.className = 'product-card';
+  article.innerHTML = `
+    <div class="thumb tall">
+      <img src="${p.imagemUrl || ''}" alt="${nome.replace(/"/g, '&quot;')}">
+    </div>
+    <div class="product-info">
+      <h3>${nome}</h3>
+      ${p.descricao ? `<p class="desc">${p.descricao}</p>` : ''}
+      <p class="price">${precoTexto}</p>
+      <a class="btn-whats" target="_blank" rel="noopener" href="https://wa.me/558681942709?text=${mensagem}">Peça no WhatsApp</a>
+    </div>
+  `;
+  return article;
+}
+
+async function carregarProdutosDoPainel() {
+  try {
+    const q = query(collection(db, 'produtos'), orderBy('criadoEm', 'desc'));
+    const snapshot = await getDocs(q);
+    snapshot.forEach((docSnap) => {
+      const p = docSnap.data();
+      if (p.disponivel === false) return;
+      const chave = normalizar(p.categoria);
+      const secaoId = categoriaParaSecao[chave] || 'novidades';
+      const secao = document.getElementById(secaoId);
+      if (!secao) return;
+      const grid = secao.querySelector('.product-grid') || secao;
+      grid.insertBefore(montarCard(p), grid.firstChild);
+    });
+    if (window.TL_attachCartButtons) window.TL_attachCartButtons(document.body);
+    if (window.TL_attachLightbox) window.TL_attachLightbox(document.body);
+  } catch (err) {
+    console.error('Erro ao carregar produtos do painel:', err);
+  }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', carregarProdutosDoPainel);
+} else {
+  carregarProdutosDoPainel();
+}
+</script>
+
 </body>
 </html>
