@@ -182,6 +182,66 @@
   .migration-status.visible{display:block}
   .product-thumb.gallery-thumb{position:relative}
   .product-thumb .photo-count{position:absolute;right:8px;bottom:8px;background:rgba(0,0,0,.68);color:#fff;padding:4px 7px;border-radius:20px;font-size:11px}
+
+/* ===== Mobile-first admin polish ===== */
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+body { overflow-x: hidden; }
+input, textarea, select, button { font-size: 16px !important; }
+button, input, textarea, select { touch-action: manipulation; }
+@media (max-width: 700px) {
+  body { padding: 0 !important; }
+  .container, .app, main, .panel, .content, .dashboard { width: 100% !important; max-width: 100% !important; }
+  .container { padding: 14px !important; }
+  .sidebar, .side-panel, .form-panel { width: 100% !important; max-width: 100% !important; position: static !important; }
+  .grid, .products-grid, .cards, .product-grid { grid-template-columns: 1fr !important; }
+  .header, .topbar, .toolbar { gap: 10px !important; flex-wrap: wrap !important; }
+  h1, h2, h3, .title, .product-name { overflow-wrap: anywhere; word-break: break-word; }
+  .product-name, .card-title { line-height: 1.25 !important; }
+  .modal, .drawer, .dialog { width: calc(100vw - 24px) !important; max-width: calc(100vw - 24px) !important; margin: 12px !important; }
+  .btn, button { min-height: 44px; }
+}
+/* Professional green primary action */
+button[type="submit"], .btn-primary, #btnSalvar, #saveBtn, .add-product, .btn-add {
+  background: #16a34a !important;
+  border-color: #16a34a !important;
+  color: #fff !important;
+}
+button[type="submit"]:hover, .btn-primary:hover, #btnSalvar:hover, #saveBtn:hover, .add-product:hover, .btn-add:hover {
+  background: #15803d !important;
+}
+
+
+/* ===== Administrator profile header ===== */
+.main { position: relative; }
+.admin-topbar{
+  display:flex;align-items:center;justify-content:flex-end;gap:12px;
+  margin-bottom:18px;padding:10px 0;
+}
+.admin-profile{
+  display:flex;align-items:center;gap:10px;
+  padding:7px 10px;border:1px solid var(--border);
+  border-radius:14px;background:rgba(255,255,255,.72);
+}
+.admin-profile-avatar{
+  width:42px;height:42px;border-radius:50%;object-fit:cover;
+  border:2px solid #16a34a;background:#111;flex:0 0 auto;
+}
+.admin-profile-text{min-width:0;line-height:1.15}
+.admin-profile-name{font-weight:800;font-size:14px;color:var(--ink);white-space:nowrap}
+.admin-profile-role{font-size:11px;color:var(--ink-soft);margin-top:3px;white-space:nowrap}
+.admin-status{
+  display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink-soft);
+  margin-right:4px;
+}
+.admin-status-dot{width:8px;height:8px;border-radius:50%;background:#16a34a;box-shadow:0 0 0 4px rgba(22,163,74,.12)}
+@media (max-width:700px){
+  .admin-topbar{justify-content:space-between}
+  .admin-profile{padding:6px 8px}
+  .admin-profile-avatar{width:38px;height:38px}
+  .admin-profile-name{font-size:13px}
+}
+
 </style>
 </head>
 <body>
@@ -221,6 +281,16 @@
 
   <main class="main">
     <div class="migration-status" id="migration-status"></div>
+<div class="admin-topbar">
+  <div class="admin-status"><span class="admin-status-dot"></span>Sistema online</div>
+  <div class="admin-profile">
+    <img class="admin-profile-avatar" src="perfil-admin.png" alt="Perfil do administrador">
+    <div class="admin-profile-text">
+      <div class="admin-profile-name">Administrador</div>
+      <div class="admin-profile-role">Painel de Controle</div>
+    </div>
+  </div>
+</div>
 <div class="main-header">
       <div>
         <h1>Produtos</h1>
