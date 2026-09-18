@@ -171,6 +171,17 @@
   .form-status { font-size: 13px; margin-top: 10px; min-height: 16px; }
   .form-status.err { color: var(--danger); }
   .form-status.ok { color: var(--success); }
+
+  .images-preview{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+  .image-item{position:relative;aspect-ratio:1;border-radius:8px;overflow:hidden;background:#E9E6DF;border:1px solid var(--border)}
+  .image-item img{width:100%;height:100%;object-fit:cover}
+  .remove-image{position:absolute;right:5px;top:5px;width:26px;height:26px;border:0;border-radius:50%;background:rgba(0,0,0,.7);color:#fff;cursor:pointer;font-size:14px}
+  .stock-note{font-size:11px;color:var(--ink-soft);margin:-8px 0 12px}
+  .stock-value{font-weight:700;font-size:12px;color:var(--ink-soft)}
+  .migration-status{margin:0 0 20px;padding:12px 14px;border-radius:10px;background:#F3EEE2;color:var(--ink);font-size:13px;display:none}
+  .migration-status.visible{display:block}
+  .product-thumb.gallery-thumb{position:relative}
+  .product-thumb .photo-count{position:absolute;right:8px;bottom:8px;background:rgba(0,0,0,.68);color:#fff;padding:4px 7px;border-radius:20px;font-size:11px}
 </style>
 </head>
 <body>
@@ -209,7 +220,8 @@
   </aside>
 
   <main class="main">
-    <div class="main-header">
+    <div class="migration-status" id="migration-status"></div>
+<div class="main-header">
       <div>
         <h1>Produtos</h1>
         <p>Adicione, edite ou remova produtos da loja em tempo real.</p>
@@ -231,10 +243,11 @@
   <h2 id="form-title">Novo produto</h2>
   <input type="hidden" id="product-id">
 
-  <div class="thumb-preview" id="thumb-preview">Sem imagem</div>
+  <div class="images-preview" id="images-preview"></div>
   <div class="form-row">
-    <label for="product-image">Foto do produto</label>
-    <input type="file" id="product-image" accept="image/*">
+    <label for="product-image">Fotos do produto</label>
+    <input type="file" id="product-image" accept="image/*" multiple>
+    <p class="stock-note">Você pode selecionar várias fotos de uma vez. No site elas poderão passar para o lado.</p>
   </div>
 
   <div class="form-row">
@@ -258,6 +271,12 @@
     <textarea id="product-desc" placeholder="Detalhes, tecido, tamanhos disponíveis..."></textarea>
   </div>
 
+  <div class="form-row">
+    <label for="product-stock">Quantidade em estoque</label>
+    <input type="number" id="product-stock" min="0" step="1" value="1" placeholder="Ex: 10">
+    <p class="stock-note">Coloque 0 quando estiver esgotado.</p>
+  </div>
+
   <div class="toggle-row">
     <input type="checkbox" id="product-available" checked style="width:16px;height:16px;">
     <label for="product-available" style="margin:0;">Disponível na loja</label>
@@ -276,8 +295,8 @@ import {
   getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
 import {
-  getFirestore, collection, addDoc, updateDoc, deleteDoc, doc,
-  onSnapshot, query, orderBy, serverTimestamp
+  getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, setDoc, getDocs,
+  onSnapshot, query, orderBy, serverTimestamp, writeBatch
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 
 // =====================================================================
@@ -326,66 +345,78 @@ togglePasswordBtn.addEventListener('click', () => {
   togglePasswordBtn.setAttribute('aria-label', isHidden ? 'Esconder senha' : 'Mostrar senha');
 });
 
-onAuthStateChanged(auth, (user) => {
+// ---------------- PRODUTOS (tempo real) ----------------
+const grid = document.getElementById('product-grid');
+const emptyState = document.getElementById('empty-state');
+const migrationStatus = document.getElementById('migration-status');
+let unsubscribe = null;
+let migrationRunning = false;
+
+onAuthStateChanged(auth, async (user) => {
   if (user) {
     loginScreen.style.display = 'none';
     appEl.classList.add('visible');
     startProductListener();
+    await migrateLegacyCatalog();
   } else {
     loginScreen.style.display = 'flex';
     appEl.classList.remove('visible');
   }
 });
 
-// ---------------- PRODUTOS (tempo real) ----------------
-const grid = document.getElementById('product-grid');
-const emptyState = document.getElementById('empty-state');
-let unsubscribe = null;
-
 function startProductListener() {
   if (unsubscribe) return;
-  const q = query(collection(db, 'produtos'), orderBy('criadoEm', 'desc'));
-  unsubscribe = onSnapshot(q, (snapshot) => {
+  unsubscribe = onSnapshot(collection(db, 'produtos'), (snapshot) => {
     grid.innerHTML = '';
-    if (snapshot.empty) {
-      emptyState.style.display = 'block';
-      return;
-    }
+    if (snapshot.empty) { emptyState.style.display = 'block'; return; }
     emptyState.style.display = 'none';
-    snapshot.forEach((docSnap) => {
-      const p = docSnap.data();
-      grid.appendChild(renderCard(docSnap.id, p));
+    const docs = Array.from(snapshot.docs);
+    docs.sort((a,b) => {
+      const ta = a.data().criadoEm?.seconds || 0;
+      const tb = b.data().criadoEm?.seconds || 0;
+      return tb - ta;
     });
+    docs.forEach((docSnap) => grid.appendChild(renderCard(docSnap.id, docSnap.data())));
+  }, (error) => {
+    console.error(error);
+    emptyState.style.display = 'block';
+    emptyState.textContent = 'Não foi possível carregar os produtos. Verifique as regras do Firestore.';
   });
+}
+
+function getImages(p) {
+  if (Array.isArray(p.imagens) && p.imagens.length) return p.imagens.filter(Boolean);
+  return p.imagemUrl ? [p.imagemUrl] : [];
 }
 
 function renderCard(id, p) {
   const card = document.createElement('div');
   card.className = 'product-card';
+  const imgs = getImages(p);
+  const stock = typeof p.estoque === 'number' ? p.estoque : null;
+  const available = p.disponivel !== false && (stock === null || stock > 0);
   card.innerHTML = `
-    <div class="product-thumb">${p.imagemUrl ? `<img src="${p.imagemUrl}" alt="${p.nome || ''}">` : 'Sem imagem'}</div>
+    <div class="product-thumb gallery-thumb">${imgs.length ? `<img src="${imgs[0]}" alt="${escapeHtml(p.nome || '')}">` : 'Sem imagem'}${imgs.length > 1 ? `<span class="photo-count">📷 ${imgs.length}</span>` : ''}</div>
     <div class="product-info">
       <span class="product-cat">${escapeHtml(p.categoria || '')}</span>
       <p class="product-name">${escapeHtml(p.nome || '')}</p>
-      <span class="product-price">R$ ${Number(p.preco || 0).toFixed(2)}</span>
+      <span class="product-price">${typeof p.preco === 'number' ? 'R$ ' + p.preco.toFixed(2).replace('.', ',') : 'Consultar preço'}</span>
+      <span class="stock-value">${stock === null ? 'Estoque: não informado' : 'Estoque: ' + stock}</span>
     </div>
     <div class="product-footer">
-      <span class="badge ${p.disponivel ? 'badge-on' : 'badge-off'}">${p.disponivel ? 'Disponível' : 'Indisponível'}</span>
+      <span class="badge ${available ? 'badge-on' : 'badge-off'}">${available ? 'Disponível' : 'Esgotado'}</span>
       <div class="card-actions">
         <button class="icon-btn edit-btn" title="Editar">✎</button>
         <button class="icon-btn delete-btn" title="Remover">🗑</button>
       </div>
-    </div>
-  `;
+    </div>`;
   card.querySelector('.edit-btn').addEventListener('click', () => openForm(id, p));
   card.querySelector('.delete-btn').addEventListener('click', () => deleteProduct(id, p));
   return card;
 }
 
 function escapeHtml(str) {
-  const div = document.createElement('div');
-  div.textContent = str;
-  return div.innerHTML;
+  const div = document.createElement('div'); div.textContent = str == null ? '' : String(str); return div.innerHTML;
 }
 
 // ---------------- FORM (adicionar/editar) ----------------
@@ -393,10 +424,10 @@ const overlay = document.getElementById('overlay');
 const formPanel = document.getElementById('form-panel');
 const formTitle = document.getElementById('form-title');
 const formStatus = document.getElementById('form-status');
-const thumbPreview = document.getElementById('thumb-preview');
-let selectedImageDataUrl = null;
+const imagesPreview = document.getElementById('images-preview');
+let selectedImages = [];
 let editingId = null;
-let editingImageUrl = null;
+let editingImages = [];
 
 document.getElementById('open-add-btn').addEventListener('click', () => openForm());
 document.getElementById('cancel-btn').addEventListener('click', closeForm);
@@ -413,9 +444,7 @@ function compressImage(file, maxDim, quality) {
         let { width, height } = img;
         if (width > height && width > maxDim) { height = Math.round(height * maxDim / width); width = maxDim; }
         else if (height > maxDim) { width = Math.round(width * maxDim / height); height = maxDim; }
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
+        const canvas = document.createElement('canvas'); canvas.width = width; canvas.height = height;
         canvas.getContext('2d').drawImage(img, 0, 0, width, height);
         resolve(canvas.toDataURL('image/jpeg', quality));
       };
@@ -425,94 +454,144 @@ function compressImage(file, maxDim, quality) {
   });
 }
 
+function renderImagesPreview() {
+  imagesPreview.innerHTML = '';
+  selectedImages.forEach((src, index) => {
+    const item = document.createElement('div'); item.className = 'image-item';
+    item.innerHTML = `<img src="${src}" alt="Foto ${index + 1}"><button type="button" class="remove-image" title="Remover foto">×</button>`;
+    item.querySelector('.remove-image').addEventListener('click', () => { selectedImages.splice(index, 1); renderImagesPreview(); });
+    imagesPreview.appendChild(item);
+  });
+  if (!selectedImages.length) imagesPreview.innerHTML = '<div class="stock-note">Nenhuma foto adicionada.</div>';
+}
+
 document.getElementById('product-image').addEventListener('change', async (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-  formStatus.className = 'form-status';
-  formStatus.textContent = 'Processando foto...';
+  const files = Array.from(e.target.files || []);
+  if (!files.length) return;
+  formStatus.className = 'form-status'; formStatus.textContent = `Processando ${files.length} foto(s)...`;
   try {
-    let dataUrl = await compressImage(file, 900, 0.72);
-    if (dataUrl.length > 700000) {
-      dataUrl = await compressImage(file, 650, 0.55);
+    for (const file of files) {
+      let dataUrl = await compressImage(file, 800, 0.58);
+      if (dataUrl.length > 320000) dataUrl = await compressImage(file, 600, 0.42);
+      selectedImages.push(dataUrl);
     }
-    selectedImageDataUrl = dataUrl;
-    thumbPreview.innerHTML = `<img src="${dataUrl}">`;
+    renderImagesPreview();
     formStatus.textContent = '';
   } catch (err) {
-    formStatus.className = 'form-status err';
-    formStatus.textContent = 'Não foi possível usar essa foto. Tente outra.';
-    console.error(err);
+    formStatus.className = 'form-status err'; formStatus.textContent = 'Uma das fotos não pôde ser usada. Tente outra.'; console.error(err);
   }
+  e.target.value = '';
 });
 
 function openForm(id = null, p = null) {
   editingId = id;
-  editingImageUrl = p ? p.imagemUrl : null;
-  selectedImageDataUrl = null;
+  editingImages = getImages(p || {});
+  selectedImages = editingImages.slice();
   formStatus.textContent = '';
   formTitle.textContent = id ? 'Editar produto' : 'Novo produto';
   document.getElementById('product-name').value = p ? p.nome || '' : '';
-  document.getElementById('product-price').value = p ? p.preco || '' : '';
+  document.getElementById('product-price').value = p && typeof p.preco === 'number' ? p.preco : '';
   document.getElementById('product-category').value = p ? p.categoria || '' : '';
   document.getElementById('product-desc').value = p ? p.descricao || '' : '';
-  document.getElementById('product-available').checked = p ? !!p.disponivel : true;
+  document.getElementById('product-stock').value = p && typeof p.estoque === 'number' ? p.estoque : 1;
+  document.getElementById('product-available').checked = p ? p.disponivel !== false : true;
   document.getElementById('product-image').value = '';
-  thumbPreview.innerHTML = p && p.imagemUrl ? `<img src="${p.imagemUrl}">` : 'Sem imagem';
-  overlay.classList.add('visible');
-  formPanel.classList.add('visible');
+  renderImagesPreview();
+  overlay.classList.add('visible'); formPanel.classList.add('visible');
 }
 
-function closeForm() {
-  overlay.classList.remove('visible');
-  formPanel.classList.remove('visible');
-}
+function closeForm() { overlay.classList.remove('visible'); formPanel.classList.remove('visible'); }
 
 document.getElementById('save-btn').addEventListener('click', async () => {
   const nome = document.getElementById('product-name').value.trim();
-  const preco = parseFloat(document.getElementById('product-price').value);
+  const precoRaw = document.getElementById('product-price').value;
+  const preco = precoRaw === '' ? null : parseFloat(precoRaw);
   const categoria = document.getElementById('product-category').value.trim();
   const descricao = document.getElementById('product-desc').value.trim();
-  const disponivel = document.getElementById('product-available').checked;
+  const estoqueRaw = document.getElementById('product-stock').value;
+  const estoque = estoqueRaw === '' ? null : Math.max(0, parseInt(estoqueRaw, 10));
+  const manualAvailable = document.getElementById('product-available').checked;
 
-  if (!nome || isNaN(preco)) {
-    formStatus.className = 'form-status err';
-    formStatus.textContent = 'Preencha ao menos nome e preço.';
-    return;
+  if (!nome || (preco !== null && isNaN(preco)) || (estoque !== null && isNaN(estoque))) {
+    formStatus.className = 'form-status err'; formStatus.textContent = 'Preencha nome e confira preço/estoque.'; return;
   }
-
-  formStatus.className = 'form-status';
-  formStatus.textContent = 'Salvando...';
-
+  if (selectedImages.length > 7) {
+    formStatus.className = 'form-status err'; formStatus.textContent = 'Use no máximo 7 fotos por produto.'; return;
+  }
+  const totalImageBytes = selectedImages.reduce((sum, src) => sum + src.length, 0);
+  if (totalImageBytes > 900000) {
+    formStatus.className = 'form-status err'; formStatus.textContent = 'As fotos ficaram grandes demais. Remova alguma foto e tente novamente.'; return;
+  }
+  formStatus.className = 'form-status'; formStatus.textContent = 'Salvando...';
   try {
-    const imagemUrl = selectedImageDataUrl || editingImageUrl || null;
-    const data = { nome, preco, categoria, descricao, disponivel, imagemUrl };
-
-    if (editingId) {
-      await updateDoc(doc(db, 'produtos', editingId), data);
-    } else {
-      data.criadoEm = serverTimestamp();
-      await addDoc(collection(db, 'produtos'), data);
-    }
-
-    formStatus.className = 'form-status ok';
-    formStatus.textContent = 'Salvo!';
-    setTimeout(closeForm, 500);
+    const imagens = selectedImages.slice();
+    const data = {
+      nome, preco, categoria, descricao,
+      estoque,
+      disponivel: estoque === 0 ? false : manualAvailable,
+      imagens,
+      imagemUrl: imagens[0] || null
+    };
+    if (editingId) await updateDoc(doc(db, 'produtos', editingId), data);
+    else { data.criadoEm = serverTimestamp(); await addDoc(collection(db, 'produtos'), data); }
+    formStatus.className = 'form-status ok'; formStatus.textContent = 'Salvo!'; setTimeout(closeForm, 500);
   } catch (e) {
     formStatus.className = 'form-status err';
-    formStatus.textContent = 'Erro ao salvar. Tente novamente.';
+    formStatus.textContent = 'Erro ao salvar. Se houver muitas fotos, reduza a quantidade/tamanho.';
     console.error(e);
   }
 });
 
 async function deleteProduct(id, p) {
   if (!confirm(`Remover "${p.nome}"? Essa ação não pode ser desfeita.`)) return;
-  try {
-    await deleteDoc(doc(db, 'produtos', id));
-  } catch (e) {
-    alert('Erro ao remover produto.');
-    console.error(e);
-  }
+  try { await deleteDoc(doc(db, 'produtos', id)); }
+  catch (e) { alert('Erro ao remover produto.'); console.error(e); }
 }
+
+// ---------------- MIGRAÇÃO DOS PRODUTOS ANTIGOS ----------------
+async function loadLegacyScript() {
+  if (window.TL_LEGACY_PRODUCTS) return window.TL_LEGACY_PRODUCTS;
+  return new Promise((resolve, reject) => {
+    const sc = document.createElement('script');
+    sc.src = 'catalogo-legado.js'; sc.onload = () => resolve(window.TL_LEGACY_PRODUCTS || []); sc.onerror = reject;
+    document.head.appendChild(sc);
+  });
+}
+
+async function migrateLegacyCatalog() {
+  if (migrationRunning || localStorage.getItem('tl_legacy_migrated_v2') === '1') return;
+  migrationRunning = true;
+  migrationStatus.className = 'migration-status visible';
+  migrationStatus.textContent = 'Verificando o catálogo antigo...';
+  try {
+    const legacy = await loadLegacyScript();
+    if (!legacy.length) { localStorage.setItem('tl_legacy_migrated_v2','1'); migrationStatus.className='migration-status'; return; }
+    const currentSnap = await getDocs(collection(db,'produtos'));
+    const existingLegacy = new Set();
+    currentSnap.forEach(d => { const p=d.data(); if(p.legacyId) existingLegacy.add(p.legacyId); });
+    const batch = writeBatch(db); let count=0;
+    legacy.forEach((p,i) => {
+      const legacyId = p.legacyId || ('legacy-' + p.categoria + '-' + i);
+      if (existingLegacy.has(legacyId)) return;
+      const ref = doc(collection(db,'produtos'), legacyId);
+      const data = {
+        nome:p.nome || 'Produto', preco:typeof p.preco==='number'?p.preco:null, categoria:p.categoria||'novidades', descricao:p.descricao||'',
+        disponivel:p.disponivel !== false, estoque:typeof p.estoque==='number'?p.estoque:null,
+        imagens:Array.isArray(p.imagens)?p.imagens:[], imagemUrl:(p.imagens&&p.imagens[0])||null,
+        badge:p.badge||'', marca:p.marca||'', legacyId, criadoEm:serverTimestamp()
+      };
+      batch.set(ref,data); count++;
+    });
+    if(count) await batch.commit();
+    localStorage.setItem('tl_legacy_migrated_v2','1');
+    migrationStatus.textContent = count ? `${count} produtos antigos foram colocados no painel. Agora você pode editar estoque, fotos, preço e descrição.` : 'O catálogo antigo já está no painel.';
+    setTimeout(()=>migrationStatus.className='migration-status',7000);
+  } catch (e) {
+    console.error('Migração:',e);
+    migrationStatus.textContent = 'Não foi possível importar o catálogo antigo automaticamente. Verifique se catalogo-legado.js está na mesma pasta do painel.';
+  } finally { migrationRunning=false; }
+}
+
 </script>
 </body>
 </html>
