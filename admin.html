@@ -289,6 +289,7 @@
   <p class="form-status" id="form-status"></p>
 </div>
 
+<script src="catalogo-legado.js?v=3"></script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
 import {
@@ -384,7 +385,20 @@ function startProductListener() {
   });
 }
 
+function normalizeName(v) {
+  return String(v || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,' ').trim();
+}
+function getLegacyProduct(p) {
+  const legacy = window.TL_LEGACY_PRODUCTS || [];
+  return legacy.find(x => p && p.legacyId && x.legacyId === p.legacyId) || legacy.find(x => normalizeName(x.nome) === normalizeName(p && p.nome));
+}
 function getImages(p) {
+  if (Array.isArray(p.imagens) && p.imagens.length) return p.imagens.filter(Boolean);
+  if (p.imagemUrl) return [p.imagemUrl];
+  const legacy = getLegacyProduct(p);
+  return legacy && Array.isArray(legacy.imagens) ? legacy.imagens.filter(Boolean) : [];
+}
+function getStoredImages(p) {
   if (Array.isArray(p.imagens) && p.imagens.length) return p.imagens.filter(Boolean);
   return p.imagemUrl ? [p.imagemUrl] : [];
 }
@@ -428,6 +442,7 @@ const imagesPreview = document.getElementById('images-preview');
 let selectedImages = [];
 let editingId = null;
 let editingImages = [];
+let legacyPreviewImages = [];
 
 document.getElementById('open-add-btn').addEventListener('click', () => openForm());
 document.getElementById('cancel-btn').addEventListener('click', closeForm);
@@ -456,13 +471,18 @@ function compressImage(file, maxDim, quality) {
 
 function renderImagesPreview() {
   imagesPreview.innerHTML = '';
+  legacyPreviewImages.forEach((src, index) => {
+    const item = document.createElement('div'); item.className = 'image-item';
+    item.innerHTML = `<img src="${src}" alt="Foto antiga ${index + 1}"><span style="position:absolute;left:5px;bottom:5px;background:rgba(0,0,0,.7);color:#fff;border-radius:5px;padding:3px 5px;font-size:9px">ANTIGA</span>`;
+    imagesPreview.appendChild(item);
+  });
   selectedImages.forEach((src, index) => {
     const item = document.createElement('div'); item.className = 'image-item';
     item.innerHTML = `<img src="${src}" alt="Foto ${index + 1}"><button type="button" class="remove-image" title="Remover foto">×</button>`;
     item.querySelector('.remove-image').addEventListener('click', () => { selectedImages.splice(index, 1); renderImagesPreview(); });
     imagesPreview.appendChild(item);
   });
-  if (!selectedImages.length) imagesPreview.innerHTML = '<div class="stock-note">Nenhuma foto adicionada.</div>';
+  if (!selectedImages.length && !legacyPreviewImages.length) imagesPreview.innerHTML = '<div class="stock-note">Nenhuma foto adicionada.</div>';
 }
 
 document.getElementById('product-image').addEventListener('change', async (e) => {
@@ -485,7 +505,9 @@ document.getElementById('product-image').addEventListener('change', async (e) =>
 
 function openForm(id = null, p = null) {
   editingId = id;
-  editingImages = getImages(p || {});
+  editingImages = getStoredImages(p || {});
+  const allImages = getImages(p || {});
+  legacyPreviewImages = editingImages.length ? [] : allImages.slice();
   selectedImages = editingImages.slice();
   formStatus.textContent = '';
   formTitle.textContent = id ? 'Editar produto' : 'Novo produto';
@@ -524,14 +546,17 @@ document.getElementById('save-btn').addEventListener('click', async () => {
   }
   formStatus.className = 'form-status'; formStatus.textContent = 'Salvando...';
   try {
-    const imagens = selectedImages.slice();
     const data = {
       nome, preco, categoria, descricao,
       estoque,
-      disponivel: estoque === 0 ? false : manualAvailable,
-      imagens,
-      imagemUrl: imagens[0] || null
+      disponivel: estoque === 0 ? false : manualAvailable
     };
+    // Fotos antigas continuam no catalogo-legado.js para não estourar o limite do Firestore.
+    // Só gravamos imagens no Firestore quando elas foram realmente adicionadas pelo painel.
+    if (selectedImages.length) {
+      data.imagens = selectedImages.slice();
+      data.imagemUrl = data.imagens[0] || null;
+    }
     if (editingId) await updateDoc(doc(db, 'produtos', editingId), data);
     else { data.criadoEm = serverTimestamp(); await addDoc(collection(db, 'produtos'), data); }
     formStatus.className = 'form-status ok'; formStatus.textContent = 'Salvo!'; setTimeout(closeForm, 500);
@@ -577,7 +602,6 @@ async function migrateLegacyCatalog() {
       const data = {
         nome:p.nome || 'Produto', preco:typeof p.preco==='number'?p.preco:null, categoria:p.categoria||'novidades', descricao:p.descricao||'',
         disponivel:p.disponivel !== false, estoque:typeof p.estoque==='number'?p.estoque:null,
-        imagens:Array.isArray(p.imagens)?p.imagens:[], imagemUrl:(p.imagens&&p.imagens[0])||null,
         badge:p.badge||'', marca:p.marca||'', legacyId, criadoEm:serverTimestamp()
       };
       batch.set(ref,data); count++;

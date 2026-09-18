@@ -1244,19 +1244,52 @@ footer .small{text-align:left;max-width:1280px;margin:22px auto 0;color:#666}
 })();
 </script>
 
+<script src="catalogo-legado.js?v=3"></script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
 import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 const firebaseConfig={apiKey:"AIzaSyCIk8rFLqO8diN8klO9V3NwnSra6pV_WO0",authDomain:"painel-administrativo-aaf11.firebaseapp.com",projectId:"painel-administrativo-aaf11",storageBucket:"painel-administrativo-aaf11.firebasestorage.app",messagingSenderId:"27717286344",appId:"1:27717286344:web:60899ccb213c565056e8fd"};
 const app=initializeApp(firebaseConfig),db=getFirestore(app);
+function normalizarNome(v){
+  return String(v||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,' ').trim();
+}
+function imagensDoLegado(p){
+  var legacy=window.TL_LEGACY_PRODUCTS||[];
+  var alvo=legacy.find(function(x){return p.legacyId && x.legacyId===p.legacyId;}) || legacy.find(function(x){return normalizarNome(x.nome)===normalizarNome(p.nome);});
+  if(!alvo)return [];
+  return Array.isArray(alvo.imagens)?alvo.imagens.filter(Boolean):[];
+}
+function enriquecerComImagens(list){
+  var legacy=window.TL_LEGACY_PRODUCTS||[];
+  var usados={};
+  var out=list.map(function(x){
+    var p=Object.assign({},x.p);
+    var tem=Array.isArray(p.imagens)&&p.imagens.length || p.imagemUrl;
+    if(!tem){var imgs=imagensDoLegado(p); if(imgs.length){p.imagens=imgs; p.imagemUrl=imgs[0];}}
+    if(p.legacyId)usados[p.legacyId]=true;
+    return {id:x.id,p:p};
+  });
+  legacy.forEach(function(lp){
+    if(usados[lp.legacyId])return;
+    var existe=out.some(function(x){return normalizarNome(x.p.nome)===normalizarNome(lp.nome);});
+    if(existe)return;
+    out.push({id:lp.legacyId,p:Object.assign({},lp)});
+  });
+  return out;
+}
 async function carregar(){
   try{
     const snap=await getDocs(collection(db,'produtos'));
     const list=[];
     snap.forEach(function(d){list.push({id:d.id,p:d.data()});});
-    list.sort(function(a,b){var ta=a.p.criadoEm&&a.p.criadoEm.seconds?a.p.criadoEm.seconds:0;var tb=b.p.criadoEm&&b.p.criadoEm.seconds?b.p.criadoEm.seconds:0;return tb-ta;});
-    if(window.TL_renderStorefront)window.TL_renderStorefront(list);
-  }catch(err){console.error('Erro ao carregar produtos do painel:',err);}
+    const finalList=enriquecerComImagens(list);
+    finalList.sort(function(a,b){var ta=a.p.criadoEm&&a.p.criadoEm.seconds?a.p.criadoEm.seconds:0;var tb=b.p.criadoEm&&b.p.criadoEm.seconds?b.p.criadoEm.seconds:0;return tb-ta;});
+    if(window.TL_renderStorefront)window.TL_renderStorefront(finalList);
+  }catch(err){
+    console.error('Erro ao carregar produtos do painel:',err);
+    var fallback=(window.TL_LEGACY_PRODUCTS||[]).map(function(p){return {id:p.legacyId,p:p};});
+    if(window.TL_renderStorefront)window.TL_renderStorefront(fallback);
+  }
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',carregar);else carregar();
 </script>
