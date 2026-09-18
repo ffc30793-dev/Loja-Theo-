@@ -553,19 +553,19 @@ async function loadLegacyScript() {
   if (window.TL_LEGACY_PRODUCTS) return window.TL_LEGACY_PRODUCTS;
   return new Promise((resolve, reject) => {
     const sc = document.createElement('script');
-    sc.src = 'catalogo-legado.js'; sc.onload = () => resolve(window.TL_LEGACY_PRODUCTS || []); sc.onerror = reject;
+    sc.src = 'catalogo-legado.js?v=2'; sc.onload = () => resolve(window.TL_LEGACY_PRODUCTS || []); sc.onerror = reject;
     document.head.appendChild(sc);
   });
 }
 
 async function migrateLegacyCatalog() {
-  if (migrationRunning || localStorage.getItem('tl_legacy_migrated_v2') === '1') return;
+  if (migrationRunning) return;
   migrationRunning = true;
   migrationStatus.className = 'migration-status visible';
   migrationStatus.textContent = 'Verificando o catálogo antigo...';
   try {
     const legacy = await loadLegacyScript();
-    if (!legacy.length) { localStorage.setItem('tl_legacy_migrated_v2','1'); migrationStatus.className='migration-status'; return; }
+    if (!legacy.length) { migrationStatus.textContent='Nenhum produto antigo foi encontrado em catalogo-legado.js.'; return; }
     const currentSnap = await getDocs(collection(db,'produtos'));
     const existingLegacy = new Set();
     currentSnap.forEach(d => { const p=d.data(); if(p.legacyId) existingLegacy.add(p.legacyId); });
@@ -583,7 +583,6 @@ async function migrateLegacyCatalog() {
       batch.set(ref,data); count++;
     });
     if(count) await batch.commit();
-    localStorage.setItem('tl_legacy_migrated_v2','1');
     migrationStatus.textContent = count ? `${count} produtos antigos foram colocados no painel. Agora você pode editar estoque, fotos, preço e descrição.` : 'O catálogo antigo já está no painel.';
     setTimeout(()=>migrationStatus.className='migration-status',7000);
   } catch (e) {
