@@ -1907,43 +1907,175 @@ function normalizar(txt) {
   return (txt || '').toString().trim().toLowerCase()
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 }
+// chave de comparação de nomes (igual à usada no painel)
+function chaveNome(txt) {
+  return normalizar(txt).replace(/[^a-z0-9]+/g, ' ').trim();
+}
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, (c) =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+function fotosDe(p) {
+  if (Array.isArray(p.imagens) && p.imagens.length) return p.imagens.filter(Boolean);
+  return p.imagemUrl ? [p.imagemUrl] : [];
+}
+function precoTexto(p) {
+  return typeof p.preco === 'number'
+    ? 'R$ ' + p.preco.toFixed(2).replace('.', ',')
+    : 'Consultar preço';
+}
+function linkWhats(nome) {
+  return 'https://wa.me/558681942709?text=' +
+    encodeURIComponent(`Olá! Tenho interesse no produto ${nome}. Ainda tem?`);
+}
+
+// Área da foto: 1 foto = imagem simples; várias = galeria (setas, bolinhas e deslizar);
+// nenhuma = aviso "sem foto" (em vez do ícone de imagem quebrada)
+function thumbHTML(fotos, nome) {
+  if (!fotos.length) {
+    return `<div class="thumb tall"><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#777;font-size:12px;letter-spacing:2px;font-weight:700">SEM FOTO</div></div>`;
+  }
+  if (fotos.length === 1) {
+    return `<div class="thumb tall"><img src="${esc(fotos[0])}" alt="${esc(nome)}"></div>`;
+  }
+  return `<div class="thumb tall gallery">
+    ${fotos.map((f, i) => `<img class="gal-img${i === 0 ? ' active' : ''}" src="${esc(f)}" alt="${esc(nome)} — foto ${i + 1}">`).join('')}
+    <button class="gal-prev" aria-label="Foto anterior">‹</button>
+    <button class="gal-next" aria-label="Próxima foto">›</button>
+    <div class="gal-dots">${fotos.map((_, i) => `<span class="dot${i === 0 ? ' active' : ''}"></span>`).join('')}</div>
+  </div>`;
+}
+
+// Liga setas/bolinhas/deslize nas galerias criadas depois do carregamento da página
+function iniciarGalerias(root) {
+  root.querySelectorAll('.thumb.gallery').forEach((gal) => {
+    if (gal.dataset.galIniciada) return;
+    gal.dataset.galIniciada = '1';
+    const imgs = gal.querySelectorAll('.gal-img');
+    const dots = gal.querySelectorAll('.dot');
+    if (imgs.length < 2) return;
+    let idx = 0;
+    const show = (i) => {
+      idx = (i + imgs.length) % imgs.length;
+      imgs.forEach((im, j) => im.classList.toggle('active', j === idx));
+      dots.forEach((d, j) => d.classList.toggle('active', j === idx));
+    };
+    const prev = gal.querySelector('.gal-prev');
+    const next = gal.querySelector('.gal-next');
+    if (prev) prev.addEventListener('click', (e) => { e.stopPropagation(); show(idx - 1); });
+    if (next) next.addEventListener('click', (e) => { e.stopPropagation(); show(idx + 1); });
+    dots.forEach((d, j) => d.addEventListener('click', (e) => { e.stopPropagation(); show(j); }));
+    let startX = null;
+    gal.addEventListener('touchstart', (e) => { startX = e.touches[0].clientX; }, { passive: true });
+    gal.addEventListener('touchend', (e) => {
+      if (startX === null) return;
+      const dx = e.changedTouches[0].clientX - startX;
+      if (Math.abs(dx) > 35) show(dx < 0 ? idx + 1 : idx - 1);
+      startX = null;
+    }, { passive: true });
+  });
+}
 
 function montarCard(p) {
   const nome = p.nome || 'Produto';
-  const precoTexto = typeof p.preco === 'number'
-    ? 'R$ ' + p.preco.toFixed(2).replace('.', ',')
-    : 'Consultar preço';
-  const mensagem = encodeURIComponent(`Olá! Tenho interesse no produto ${nome}. Ainda tem?`);
   const article = document.createElement('article');
   article.className = 'product-card';
   article.innerHTML = `
-    <div class="thumb tall">
-      <img src="${p.imagemUrl || ''}" alt="${nome.replace(/"/g, '&quot;')}">
-    </div>
+    ${thumbHTML(fotosDe(p), nome)}
     <div class="product-info">
-      <h3>${nome}</h3>
-      ${p.descricao ? `<p class="desc">${p.descricao}</p>` : ''}
-      <p class="price">${precoTexto}</p>
-      <a class="btn-whats" target="_blank" rel="noopener" href="https://wa.me/558681942709?text=${mensagem}">Peça no WhatsApp</a>
+      <h3>${esc(nome)}</h3>
+      ${p.descricao ? `<p class="desc">${esc(p.descricao)}</p>` : ''}
+      <p class="price">${precoTexto(p)}</p>
+      <a class="btn-whats" target="_blank" rel="noopener" href="${linkWhats(nome)}">Peça no WhatsApp</a>
     </div>
   `;
   return article;
 }
 
+// Produtos antigos já existem no HTML do site (com foto). Em vez de criar um segundo card,
+// o produto do painel atualiza o card que já existe.
+function atualizarCardExistente(card, p) {
+  const nome = card.querySelector('h3')?.textContent.trim() || p.nome || 'Produto';
+  if (p.descricao) {
+    let d = card.querySelector('.desc');
+    if (!d) {
+      d = document.createElement('p');
+      d.className = 'desc';
+      card.querySelector('h3')?.insertAdjacentElement('afterend', d);
+    }
+    d.textContent = p.descricao;
+  }
+  if (typeof p.preco === 'number') {
+    const pr = card.querySelector('.price');
+    if (pr) pr.textContent = precoTexto(p);
+  }
+  const fotos = fotosDe(p);
+  if (fotos.length) {
+    const thumb = card.querySelector('.thumb');
+    if (thumb) {
+      const badge = thumb.querySelector('.badge');
+      const novo = document.createElement('div');
+      novo.innerHTML = thumbHTML(fotos, nome);
+      const novoThumb = novo.firstElementChild;
+      if (badge) novoThumb.insertBefore(badge, novoThumb.firstChild);
+      thumb.replaceWith(novoThumb);
+    }
+  }
+  // o botão do carrinho guarda o preço de quando foi criado: recria com o preço novo
+  card.querySelector('.btn-cart')?.remove();
+}
+
 async function carregarProdutosDoPainel() {
   try {
+    // cards que já estão no HTML (fora da home, que só tem cópias em miniatura)
+    const estaticos = new Map();
+    document.querySelectorAll('section.tab-panel:not(#inicio) .product-card').forEach((card) => {
+      const chave = chaveNome(card.querySelector('h3')?.textContent);
+      if (!chave) return;
+      if (!estaticos.has(chave)) estaticos.set(chave, []);
+      estaticos.get(chave).push(card);
+    });
+
     const q = query(collection(db, 'produtos'), orderBy('criadoEm', 'desc'));
     const snapshot = await getDocs(q);
+    const nomesTratados = new Set();
+
     snapshot.forEach((docSnap) => {
       const p = docSnap.data();
+      const chave = chaveNome(p.nome);
+      const fotos = fotosDe(p);
+      const secaoId = categoriaParaSecao[normalizar(p.categoria)] || 'novidades';
+
+      // 1) já existe um card com esse nome no site? atualiza ele (ou tira, se foi ocultado no painel)
+      const candidatos = (estaticos.get(chave) || []).filter((c) => !c.dataset.tlPainel);
+      const card = candidatos.find((c) => c.closest('section')?.id === secaoId) || candidatos[0];
+      if (card) {
+        card.dataset.tlPainel = '1';
+        nomesTratados.add(chave);
+        const jaEsgotado = !!card.querySelector('.badge.out');
+        if (p.disponivel === false && !jaEsgotado) { card.remove(); return; }
+        atualizarCardExistente(card, p);
+        return;
+      }
+
       if (p.disponivel === false) return;
-      const chave = normalizar(p.categoria);
-      const secaoId = categoriaParaSecao[chave] || 'novidades';
+
+      // 2) sem foto e o nome já foi tratado (duplicado), ou item antigo sem foto que não achou
+      //    par no site: não cria card vazio
+      if (!fotos.length && (nomesTratados.has(chave) || p.legacyId)) {
+        if (p.legacyId) console.warn('Produto antigo sem card correspondente no site:', p.nome);
+        return;
+      }
+
+      // 3) produto novo do painel
       const secao = document.getElementById(secaoId);
       if (!secao) return;
       const grid = secao.querySelector('.product-grid') || secao;
       grid.insertBefore(montarCard(p), grid.firstChild);
+      nomesTratados.add(chave);
     });
+
+    iniciarGalerias(document.body);
     if (window.TL_attachCartButtons) window.TL_attachCartButtons(document.body);
     if (window.TL_attachLightbox) window.TL_attachLightbox(document.body);
   } catch (err) {
